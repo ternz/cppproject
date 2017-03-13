@@ -1,0 +1,107 @@
+syntax = "proto2";
+package simplechat;
+
+enum MessageType {
+    HEARTBEAT_REQ = 0;
+    HEARTBEAT_RSP = 1;
+    LOGIN_REQ = 2;
+    LOGIN_RSP = 3;
+    LOGOUT_REQ = 4;
+	LOGOUT_RSP = 5;
+    MESSAGESEND_REQ = 6;
+    MESSAGESEND_RSP = 7;
+    MESSAGERECV = 8;
+    SOMEONEENTER = 9;
+    SOMEONELEAVE = 10;
+	COMMON_RSP = 11;
+}
+
+enum ErrorCode {  
+	SUCCESS = 0;
+	PARSE_MESSAGE_ERROR = 1;
+	SERIALIZE_MESSAGE_ERROR = 2;
+	NOT_SEPORT_MESSAGE_TYPE = 3;
+	INVALID_USER_OR_ROOM = 4;
+	USER_ALREADY_LOGIN = 5;
+	INVALID_MESSAGE_TYPE = 6;
+}
+
+enum UserStatus {
+    OFFLINE = 0;
+    ONLINE = 1;
+}
+
+message HeartBeatRequest {
+    required string user = 1;
+}
+
+message HeartBeatResponse {
+    required UserStatus status = 1;
+    required int32 onlines = 2;
+}
+
+message CommonResponse {
+    required ErrorCode code = 1;
+    optional string message = 2;
+}
+
+message LoginRequest {
+    required string user = 1;
+    required string room = 2;
+}
+
+message LoginResponse {
+    required ErrorCode code = 1;
+    required string message = 2;
+    required int32 onlines = 3;
+}
+
+message LogoutRequest {
+    required string user = 1;
+}
+
+message LogoutResponse {
+    required ErrorCode code = 1;
+    optional string message = 2;
+}
+
+message MessageSendRequest {
+    required string user = 1;
+    required string room = 2;
+    required string message = 3;
+    required uint64 time = 4;
+}
+
+message MessageSendResponse {
+    required ErrorCode code = 1;
+    optional string message = 2;
+}
+
+message MessageRecv {
+    required string sender = 1;
+    required string room = 2;
+    required string message = 3;
+    required uint64 time = 4;
+}
+
+message SomeoneEnter {
+    required string user = 1;
+    required uint64 time = 2;
+}
+
+message SomeoneLeave {
+    required string user = 1;
+    required uint64 time = 2;
+}
+
+message ListRoomRequest {
+    required string user = 1;
+    required string room = 2;
+}
+
+message ListRoomResponse {
+    required string room = 1;
+    required int32 onlines = 2;
+    repeated string user = 3;
+}
+
