@@ -61,11 +61,82 @@ void IOThread::createNotificationPipe() {
 }
 
 bool IOThread::notify(Connection* conn) {
+	int fd = getNotificationSendFD();
+  	if (fd < 0) {
+    	return false;
+  	}
 
+	fd_set wfds, efds;
+	int ret = -1;
+	int kSize = sizeof(conn);
+	const char* pos = (const char*)const_cast_sockopt(&conn);
+
+  	while (kSize > 0) {
+		FD_ZERO(&wfds);
+		FD_ZERO(&efds);
+		FD_SET(fd, &wfds);
+		FD_SET(fd, &efds);
+		ret = select(fd + 1, NULL, &wfds, &efds, NULL);
+		if (ret < 0) {
+			return false;
+		} else if (ret == 0) {
+			continue;
+		}
+		if (FD_ISSET(fd, &efds)) {
+			::close(fd);
+			return false;
+		}
+    	if (FD_ISSET(fd, &wfds)) {
+			ret = send(fd, pos, kSize, 0);
+			if (ret < 0) {
+				if (errno == EAGAIN) {
+					continue;
+				}
+				::close(fd);
+				return false;
+			}
+			kSize -= ret;
+			pos += ret;
+    	}
+  	}
+  	return true;
 }
 
 void IOThread::notificationHandler(evutil_socket_t fd, short which, void * arg) {
+	IOThread* ioThread = (IOThread*)v;
+  assert(ioThread);
+  (void)which;
 
+  while (true) {
+    TNonblockingServer::TConnection* connection = 0;
+    const int kSize = sizeof(connection);
+    long nBytes = recv(fd, cast_sockopt(&connection), kSize, 0);
+    if (nBytes == kSize) {
+      if (connection == NULL) {
+        // this is the command to stop our thread, exit the handler!
+        return;
+      }
+      connection->transition();
+    } else if (nBytes > 0) {
+      // throw away these bytes and hope that next time we get a solid read
+      GlobalOutput.printf("notifyHandler: Bad read of %d bytes, wanted %d", nBytes, kSize);
+      ioThread->breakLoop(true);
+      return;
+    } else if (nBytes == 0) {
+      GlobalOutput.printf("notifyHandler: Notify socket closed!");
+      // exit the loop
+      break;
+    } else { // nBytes < 0
+      if (THRIFT_GET_SOCKET_ERROR != THRIFT_EWOULDBLOCK
+          && THRIFT_GET_SOCKET_ERROR != THRIFT_EAGAIN) {
+        GlobalOutput.perror("TNonblocking: notifyHandler read() failed: ", THRIFT_GET_SOCKET_ERROR);
+        ioThread->breakLoop(true);
+        return;
+      }
+      // exit the loop
+      break;
+    }
+  }
 }
 
 }
