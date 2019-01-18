@@ -8,7 +8,7 @@ namespace ZNetworkFramework {
 class IOThread;
 
 /// Three states for sockets: recv frame size, recv data, and send mode
-enum SocketState { SOCKET_RECV_FRAMING, SOCKET_RECV, SOCKET_SEND };
+enum SocketState { SOCKET_RECV, SOCKET_SEND };
 
 /**
  * Five states for the nonblocking server:
@@ -20,7 +20,6 @@ enum SocketState { SOCKET_RECV_FRAMING, SOCKET_RECV, SOCKET_SEND };
  */
 enum ConnState {
   Conn_INIT,
-  Conn_READ_FRAME_SIZE,
   Conn_READ_REQUEST,
   Conn_WAIT_TASK,
   Conn_SEND_RESULT,
@@ -47,10 +46,30 @@ private:
  	void setIdle() { setFlags(0); }
   	void setFlags(short eventFlags);
 
+	static void eventHandler(evutil_socket_t fd, short which, void* arg);
   	void workSocket();
 
 private:
+	int fd_;
+	Server* server_;
 	IOThread* ioThread_;
+
+  	struct event event_;
+  	short eventFlags_;
+
+	SocketState sockState_;
+	ConnState connState_;
+
+	int readWant_;
+  	int readBufferPos_;
+  	char* readBuffer_;
+  	int readBufferSize_;
+ 	char* writeBuffer_;
+  	int writeBufferSize_;
+  	int writeBufferPos_;
+  	int largestWriteBufferSize_;
+  	int callsForResize_;
+	
 };
 
 }

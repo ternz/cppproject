@@ -14,6 +14,7 @@ public:
 	~IOThread();
 
 	int getNumber() {return number_;}
+	event_base* getEventBase() { return evbase_; }
 
 	void registerListenEvent(int listenfd);
 	void registerNotificationEvent();
